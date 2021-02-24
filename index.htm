@@ -1,0 +1,197 @@
+<style>
+
+body {
+  background: #1d252c;
+}
+
+canvas {
+  width: 800px;
+  height: 800px;
+  border: 1px black solid;
+  margin: 20px;
+}
+
+</style>
+<canvas></canvas>
+
+<!-- Libraries -->
+<script src="../libs/common.js"></script>
+<script src="../libs/input.js"></script>
+<script src="../libs/debug.js"></script>
+
+<!-- Source -->
+<script src="actor.js"></script>
+<script src="shadowbase.js"></script>
+<script src="shadowwall.js"></script>
+<script src="light.js"></script>
+<script>
+
+const HEIGHT = 800;
+const WIDTH = 800;
+const BACKGROUND = '#ddd';
+
+// Main canvas
+const canvas = document.querySelector('canvas');
+const context = canvas.getContext('2d');
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
+
+// Global floor lightmap canvas
+const globalFloorLightMapCanvas = document.createElement('canvas');
+const globalFloorLightMapContext = globalFloorLightMapCanvas.getContext('2d');
+globalFloorLightMapCanvas.width = WIDTH;
+globalFloorLightMapCanvas.height = HEIGHT;
+
+// Global wall lightmap canvas
+const globalWallLightMapCanvas = document.createElement('canvas');
+const globalWallLightMapContext = globalWallLightMapCanvas.getContext('2d');
+globalWallLightMapCanvas.width = WIDTH;
+globalWallLightMapCanvas.height = HEIGHT;
+
+// Initialise input manager and debug
+const input = new Input(canvas);
+Debug.initialise();
+
+// Actors and lights
+let actors = [];
+let lights = [];
+
+// Ambient light colour
+const AMBIENT_LIGHT = '#555';
+
+function initialise() {
+  loop();
+}
+initialise();
+
+function loop() {
+  update();
+  draw();
+  window.requestAnimationFrame(loop);
+}
+
+function update() {
+
+  // Remove disposed objects
+  actors = actors.filter(actor => !actor.disposed);
+  lights = lights.filter(light => !light.disposed);
+
+  // Create lights, shadow bases or shadow walls
+  const p = input.mousePosition();
+  if (input.keyPressed('b')) {
+    actors.push(new ShadowBase(p.x, p.y, 100, 100));
+  }
+  if (input.keyPressed('w')) {
+    actors.push(new ShadowWall(p.x, p.y, 100, 100));
+  }
+  if (input.keyPressed('l')) {
+    lights.push(new Light(p.x, p.y, 200));
+  }
+
+  // Update all actors and lights
+  actors.forEach(actor => actor.update());
+  lights.forEach(light => light.update());
+
+  // Show help text
+  Debug.show('b', 'Create shadow base');
+  Debug.show('w', 'Create shadow wall');
+  Debug.show('l', 'Create light');
+  Debug.show('Ctrl-drag', 'Resize');
+  Debug.show('a/z', 'Change shadow base depth / light colour');
+  Debug.show('s/x', 'Change shadow base floor offset');
+
+  // Update input manager
+  input.update();
+}
+
+function draw() {
+  context.clearRect(0, 0, WIDTH, HEIGHT);
+
+  // Draw background
+  context.fillStyle = BACKGROUND;
+  context.fillRect(0, 0, WIDTH, HEIGHT);
+
+  // Reset floor lightmap
+  globalFloorLightMapContext.clearRect(0, 0, WIDTH, HEIGHT);
+  globalFloorLightMapContext.fillStyle = AMBIENT_LIGHT;
+  globalFloorLightMapContext.fillRect(0, 0, WIDTH, HEIGHT);
+
+  // Reset wall lightmap
+  globalWallLightMapContext.clearRect(0, 0, WIDTH, HEIGHT);
+  globalWallLightMapContext.fillStyle = AMBIENT_LIGHT;
+  globalWallLightMapContext.fillRect(0, 0, WIDTH, HEIGHT);
+
+  // Render lightmaps
+  lights.forEach(light => light.drawLightMaps(
+    globalFloorLightMapContext,
+    globalWallLightMapContext,
+    actors
+  ));
+
+  // Draw floor
+  actors.filter(actor => actor instanceof ShadowBase).forEach(actor => actor.draw(context));
+
+  // Draw floor lightmap
+  context.save();
+  context.globalCompositeOperation = 'multiply';
+  context.drawImage(globalFloorLightMapCanvas, 0, 0);
+  context.restore();
+
+  // Draw walls
+  actors
+  .filter(actor => actor instanceof ShadowWall)
+  .sort((a, b) => a.bottom - b.bottom)
+  .forEach(actor => actor.draw(context));
+
+  // Draw wall lightmap
+  context.save();
+  context.beginPath();
+  actors.filter(actor => actor instanceof ShadowWall).forEach(actor => {
+    polygon(context, ...actor.vertices);
+  });
+  context.clip();
+  context.globalCompositeOperation = 'multiply';
+  context.drawImage(globalWallLightMapCanvas, 0, 0);
+  context.restore();
+
+  // Draw light markers
+  lights.forEach(light => light.draw(
+    context
+  ));
+
+  // Render debug
+  Debug.draw(context);
+}
+
+function cross(context, x, y) {
+  const SIZE = 4;
+  line(context, x - SIZE, y - SIZE, x + SIZE, y + SIZE);
+  line(context, x + SIZE, y - SIZE, x - SIZE, y + SIZE);
+}
+
+function line(context, x1, y1, x2, y2) {
+  context.moveTo(Math.floor(x1), Math.floor(y1));
+  context.lineTo(Math.floor(x2), Math.floor(y2));
+}
+
+function polygon(context, ...vertices) {
+  context.moveTo(Math.floor(vertices[0].x), Math.floor(vertices[0].y));
+  for (let i = 1; i < vertices.length; i++) {
+    context.lineTo(Math.floor(vertices[i].x), Math.floor(vertices[i].y));
+  }
+}
+
+function save() {
+  localStorage.setItem('state', JSON.stringify({
+    actors: actors.map(actor => actor.serialize()),
+    lights: lights.map(light => light.serialize())
+  }));
+}
+
+function load() {
+  const state = JSON.parse(localStorage.getItem('state'));
+  actors = state.actors.map(actor => Actor.deserialize(actor));
+  lights = state.lights.map(light => Light.deserialize(light));
+}
+
+</script>
