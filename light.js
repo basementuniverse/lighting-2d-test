@@ -1,5 +1,5 @@
 class Light {
-  static colours = [
+  static COLOURS = [
     '#fff',
     '#f00',
     '#0f0',
@@ -8,6 +8,8 @@ class Light {
     '#f0f',
     '#0ff'
   ];
+
+  static WALL_SHADOW_AMOUNT = 1.5;
 
   constructor(x, y, r, c = 0) {
     this.position = vec(x, y);
@@ -32,12 +34,12 @@ class Light {
   }
 
   get colour() {
-    return Light.colours[this.c];
+    return Light.COLOURS[this.c];
   }
 
   nextColour() {
     this.c++;
-    if (this.c >= Light.colours.length) {
+    if (this.c >= Light.COLOURS.length) {
       this.c = 0;
     }
   }
@@ -45,7 +47,7 @@ class Light {
   prevColour() {
     this.c--;
     if (this.c < 0) {
-      this.c = Light.colours.length - 1;
+      this.c = Light.COLOURS.length - 1;
     }
   }
 
@@ -247,6 +249,21 @@ class Light {
     // Cast shadows from each shadow base onto the floor lightmap
     actors.filter(actor => actor instanceof ShadowBase).forEach(shadowBase => {
       const vertices = shadowBase.vertices;
+
+      // If this shadow base is offset from the floor, render a shadow using the shadow base's profile
+      let shadowY = shadowBase.bottom;
+      if (shadowBase.offset > 0) {
+        this.floorLightMapContext.beginPath();
+        polygon(this.floorLightMapContext, ...shadowBase.vertices.map(v => {
+          const d = vec.sub(v, this.position);
+          return vec.add(v, vec.mul(d, shadowBase.offset));
+        }));
+        this.floorLightMapContext.fill();
+        this.floorLightMapContext.stroke();
+        shadowY += (shadowY - this.position.y) * shadowBase.offset;
+      }
+
+      // Render a shadow volume for each pair of vertices
       for (let i = 0; i < vertices.length; i++) {
         const previous = vertices[(i === 0 ? vertices.length : i) - 1];
         const current = vertices[i];
@@ -259,24 +276,32 @@ class Light {
 
         // Check if edge is facing away from the light
         if (vec.dot(edgeNormal, lightNormal) < 0) {
-          this.projectShadow(previous, current, shadowBase, walls);
+          this.projectShadow(previous, current, shadowBase, walls, shadowY);
         }
       }
     });
     this.floorLightMapContext.restore();
   }
 
-  projectShadow(a, b, shadowBase, walls) {
-    const d1 = vec.sub(a, this.position);
-    const d2 = vec.sub(b, this.position);
+  projectShadow(a, b, shadowBase, walls, shadowOffset) {
+    const aDelta = vec.sub(a, this.position);
+    const bDelta = vec.sub(b, this.position);
+    let v1 = vec(a);
+    let v4 = vec(b);
+
+    // If this shadow base is offset from the floor, offset the starting vertices for this shadow volume
+    if (shadowBase.offset > 0) {
+      v1 = vec.add(v1, vec.mul(aDelta, shadowBase.offset));
+      v4 = vec.add(v4, vec.mul(bDelta, shadowBase.offset));
+    }
 
     // Length of shadow based on distance to light source
-    const v1 = vec.add(a, vec.mul(d1, shadowBase.depth));
-    const v2 = vec.add(b, vec.mul(d2, shadowBase.depth));
+    const v2 = vec.add(v1, vec.mul(aDelta, shadowBase.depth));
+    const v3 = vec.add(v4, vec.mul(bDelta, shadowBase.depth));
 
     // Create floor shadow shape
     this.floorLightMapContext.beginPath();
-    polygon(this.floorLightMapContext, a, v1, v2, b);
+    polygon(this.floorLightMapContext, v1, v2, v3, v4);
     this.floorLightMapContext.fill();
     this.floorLightMapContext.stroke();
 
@@ -296,39 +321,47 @@ class Light {
       }
 
       // Check if the shadow begins below the wall and extends beyond the wall's lower edge
-      if (!(a.y >= wallY && b.y >= wallY && (v1.y < wallY || v2.y < wallY))) {
+      if (!(a.y >= wallY && b.y >= wallY && (v2.y < wallY || v3.y < wallY))) {
         return;
       }
 
       // Get intersection of shadow edge segments to an infinite line coplanar to the wall's bottom edge
-      const v1Intersection = vec(
-        Math.lerp(a.x, v1.x, Math.unlerp(a.y, v1.y, wallY)),
+      const v2Intersection = vec(
+        Math.clamp(
+          Math.lerp(v1.x, v2.x, Math.unlerp(v1.y, v2.y, wallY)),
+          Math.min(v1.x, v2.x),
+          Math.max(v1.x, v2.x)
+        ),
         wallY
       );
-      const v2Intersection = vec(
-        Math.lerp(b.x, v2.x, Math.unlerp(b.y, v2.y, wallY)),
+      const v3Intersection = vec(
+        Math.clamp(
+          Math.lerp(v4.x, v3.x, Math.unlerp(v4.y, v3.y, wallY)),
+          Math.min(v4.x, v3.x),
+          Math.max(v4.x, v3.x)
+        ),
         wallY
       );
 
       // Calculate shadow min/max boundaries (ie. min = left and max = right)
-      let min = v1Intersection.x, max = v2Intersection.x;
+      let min = v2Intersection.x, max = v3Intersection.x;
 
-      // Check if the shadow edge falls short of the wall
-      if (v1.y > wallY) {
-        min = v1.x;
+      // Check if the shadow edge falls short of the wall edge
+      if (v2.y >= wallY) {
+        min = v2.x;
       }
-      if (v2.y > wallY) {
-        max = v2.x;
+      if (v3.y >= wallY) {
+        max = v3.x;
       }
 
       // Calculate shadow height
-      const h = Math.max(
-        v1.y <= wallY ? (v1Intersection.y - v1.y) : 0,
-        v2.y <= wallY ? (v2Intersection.y - v2.y) : 0
-      ) * 1.4;
+      const height = Math.max(0, wallY - Math.min(v2.y, v3.y)) * Light.WALL_SHADOW_AMOUNT;
+
+      // Calculate shadow offset
+      const offset = Math.max(0, wallY - shadowOffset) * Light.WALL_SHADOW_AMOUNT;
 
       // If the wall shadow height or width is 0, don't draw the shadow
-      if (h === 0 || min - max === 0) {
+      if (height === 0 || min - max === 0) {
         return;
       }
 
@@ -350,10 +383,10 @@ class Light {
       this.wallLightMapContext.beginPath();
       polygon(
         this.wallLightMapContext,
-        vec(min, wallY),
-        vec(max, wallY),
-        vec(max, Math.max(wallY - h, wall.position.y)),
-        vec(min, Math.max(wallY - h, wall.position.y))
+        vec(min, Math.max(wallY - offset, wall.position.y)),
+        vec(max, Math.max(wallY - offset, wall.position.y)),
+        vec(max, Math.max(wallY - height, wall.position.y)),
+        vec(min, Math.max(wallY - height, wall.position.y))
       );
       this.wallLightMapContext.fill();
       this.wallLightMapContext.stroke();

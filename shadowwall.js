@@ -5,7 +5,12 @@ class ShadowWall extends Actor {
     this.foreground = 'red';
   }
 
-  get bottom() {
-    return this.position.y + this.size.y;
+  static deserialize(data) {
+    return new ShadowWall(
+      data.position.x,
+      data.position.y,
+      data.size.x,
+      data.size.y
+    );
   }
 }

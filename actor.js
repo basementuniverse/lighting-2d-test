@@ -23,13 +23,7 @@ class Actor {
   }
 
   static deserialize(data) {
-    const c = eval(data.type);
-    return new c(
-      data.position.x,
-      data.position.y,
-      data.size.x,
-      data.size.y
-    );
+    return eval(data.type).deserialize(data);
   }
 
   get vertices() {
@@ -48,6 +42,10 @@ class Actor {
       left: this.position.x,
       right: this.position.x + this.size.x
     };
+  }
+
+  get bottom() {
+    return this.position.y + this.size.y;
   }
 
   update() {

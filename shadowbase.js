@@ -7,6 +7,27 @@ class ShadowBase extends Actor {
     this.foreground = 'red';
   }
 
+  serialize() {
+    return {
+      type: this.constructor.name,
+      position: this.position,
+      size: this.size,
+      depth: this.depth,
+      offset: this.offset
+    };
+  }
+
+  static deserialize(data) {
+    return new ShadowBase(
+      data.position.x,
+      data.position.y,
+      data.size.x,
+      data.size.y,
+      data.depth,
+      data.offset
+    );
+  }
+
   update() {
     super.update();
 
