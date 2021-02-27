@@ -1,0 +1,22 @@
+<canvas style="width: 400px; height: 400px; border: 1px black solid"></canvas>
+<script>
+
+const canvas = document.querySelector('canvas');
+const context = canvas.getContext('2d');
+canvas.width = 400;
+canvas.height = 400;
+
+context.fillStyle = 'white';
+context.fillRect(0, 0, 400, 400);
+
+context.fillStyle = 'black';
+
+// Testing what happens when clipping paths overlap
+context.beginPath();
+context.rect(50, 50, 50, 50);
+context.rect(150, 150, 50, 50);
+context.rect(170, 170, 50, 50);
+context.clip();
+context.fillRect(0, 0, 400, 400);
+
+</script>

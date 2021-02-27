@@ -9,13 +9,14 @@ class Light {
     '#0ff'
   ];
 
+  static WALL_Y_OFFSET = 50;
+
   static WALL_SHADOW_AMOUNT = 1.5;
 
   constructor(x, y, r, c = 0) {
     this.position = vec(x, y);
     this.radius = r;
     this.c = c;
-    this.wallYOffset = 50;
 
     // Each light has its own floor lightmap canvas
     this.floorLightMapCanvas = document.createElement('canvas');
@@ -218,7 +219,7 @@ class Light {
     globalWallLightMapContext.drawImage(
       this.wallLightMapCanvas,
       this.position.x - this.radius,
-      this.position.y - this.radius - this.wallYOffset
+      this.position.y - this.radius - Light.WALL_Y_OFFSET
     );
     globalWallLightMapContext.restore();
   }
@@ -238,7 +239,7 @@ class Light {
     this.wallLightMapContext.save();
     this.wallLightMapContext.translate(
       -this.position.x + this.radius,
-      -this.position.y + this.radius + this.wallYOffset
+      -this.position.y + this.radius + Light.WALL_Y_OFFSET
     );
     this.wallLightMapContext.fillStyle = 'black';
     this.wallLightMapContext.strokeStyle = 'black';
