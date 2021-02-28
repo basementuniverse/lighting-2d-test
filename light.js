@@ -19,12 +19,12 @@ class Light {
     this.c = c;
 
     // Each light has its own floor lightmap canvas
-    this.floorLightMapCanvas = document.createElement('canvas');
-    this.floorLightMapContext = this.floorLightMapCanvas.getContext('2d');
+    this.floorShadowMapCanvas = document.createElement('canvas');
+    this.floorShadowMapContext = this.floorShadowMapCanvas.getContext('2d');
 
     // Each light has its own wall lightmap canvas
-    this.wallLightMapCanvas = document.createElement('canvas');
-    this.wallLightMapContext = this.wallLightMapCanvas.getContext('2d');
+    this.wallShadowMapCanvas = document.createElement('canvas');
+    this.wallShadowMapContext = this.wallShadowMapCanvas.getContext('2d');
 
     // Dragging
     this.hovered = false;
@@ -106,8 +106,8 @@ class Light {
     if (this.resizing) {
       this.radius = Math.max(20, vec.len(vec.sub(p, this.position)));
     }
-    this.floorLightMapCanvas.width = this.floorLightMapCanvas.height = this.radius * 2;
-    this.wallLightMapCanvas.width = this.wallLightMapCanvas.height = this.radius * 2;
+    this.floorShadowMapCanvas.width = this.floorShadowMapCanvas.height = this.radius * 2;
+    this.wallShadowMapCanvas.width = this.wallShadowMapCanvas.height = this.radius * 2;
 
     // Delete
     if (this.hovered && input.keyPressed('Delete')) {
@@ -157,22 +157,22 @@ class Light {
   }
 
   drawLightMaps(globalFloorLightMapContext, globalWallLightMapContext, actors) {
-    this.floorLightMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
-    this.wallLightMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
+    this.floorShadowMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
+    this.wallShadowMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
 
     // Fill lightmaps with darkness
     // Floor
-    this.floorLightMapContext.fillStyle = 'black';
-    this.floorLightMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
+    this.floorShadowMapContext.fillStyle = 'black';
+    this.floorShadowMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
     // Wall
-    this.wallLightMapContext.fillStyle = 'black';
-    this.wallLightMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
+    this.wallShadowMapContext.fillStyle = 'black';
+    this.wallShadowMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
 
     // Add light to lightmap
     // Floor
-    this.floorLightMapContext.beginPath();
-    this.floorLightMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
-    const floorGradient = this.floorLightMapContext.createRadialGradient(
+    this.floorShadowMapContext.beginPath();
+    this.floorShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
+    const floorGradient = this.floorShadowMapContext.createRadialGradient(
       this.radius,
       this.radius,
       0,
@@ -182,12 +182,12 @@ class Light {
     );
     floorGradient.addColorStop(0, this.colour);
     floorGradient.addColorStop(1, 'transparent');
-    this.floorLightMapContext.fillStyle = floorGradient;
-    this.floorLightMapContext.fill();
+    this.floorShadowMapContext.fillStyle = floorGradient;
+    this.floorShadowMapContext.fill();
     // Wall
-    this.wallLightMapContext.beginPath();
-    this.wallLightMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
-    const wallGradient = this.wallLightMapContext.createRadialGradient(
+    this.wallShadowMapContext.beginPath();
+    this.wallShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
+    const wallGradient = this.wallShadowMapContext.createRadialGradient(
       this.radius,
       this.radius,
       0,
@@ -197,8 +197,8 @@ class Light {
     );
     wallGradient.addColorStop(0, this.colour);
     wallGradient.addColorStop(1, 'transparent');
-    this.wallLightMapContext.fillStyle = wallGradient;
-    this.wallLightMapContext.fill();
+    this.wallShadowMapContext.fillStyle = wallGradient;
+    this.wallShadowMapContext.fill();
 
     // Subtract shadows from lightmap
     this.drawShadows(actors);
@@ -208,7 +208,7 @@ class Light {
     globalFloorLightMapContext.save();
     globalFloorLightMapContext.globalCompositeOperation = 'screen';
     globalFloorLightMapContext.drawImage(
-      this.floorLightMapCanvas,
+      this.floorShadowMapCanvas,
       this.position.x - this.radius,
       this.position.y - this.radius
     );
@@ -217,7 +217,7 @@ class Light {
     globalWallLightMapContext.save();
     globalWallLightMapContext.globalCompositeOperation = 'screen';
     globalWallLightMapContext.drawImage(
-      this.wallLightMapCanvas,
+      this.wallShadowMapCanvas,
       this.position.x - this.radius,
       this.position.y - this.radius - Light.WALL_Y_OFFSET
     );
@@ -227,22 +227,22 @@ class Light {
   drawShadows(actors) {
 
     // Prepare floor lightmap
-    this.floorLightMapContext.save();
-    this.floorLightMapContext.translate(
+    this.floorShadowMapContext.save();
+    this.floorShadowMapContext.translate(
       -this.position.x + this.radius,
       -this.position.y + this.radius
     );
-    this.floorLightMapContext.fillStyle = 'black';
-    this.floorLightMapContext.strokeStyle = 'black';
+    this.floorShadowMapContext.fillStyle = 'black';
+    this.floorShadowMapContext.strokeStyle = 'black';
 
     // Prepare wall lightmap
-    this.wallLightMapContext.save();
-    this.wallLightMapContext.translate(
+    this.wallShadowMapContext.save();
+    this.wallShadowMapContext.translate(
       -this.position.x + this.radius,
       -this.position.y + this.radius + Light.WALL_Y_OFFSET
     );
-    this.wallLightMapContext.fillStyle = 'black';
-    this.wallLightMapContext.strokeStyle = 'black';
+    this.wallShadowMapContext.fillStyle = 'black';
+    this.wallShadowMapContext.strokeStyle = 'black';
 
     // Get a list of walls
     const walls = actors.filter(actor => actor instanceof ShadowWall);
@@ -254,13 +254,13 @@ class Light {
       // If this shadow base is offset from the floor, render a shadow using the shadow base's profile
       let shadowY = shadowBase.bottom;
       if (shadowBase.offset > 0) {
-        this.floorLightMapContext.beginPath();
-        polygon(this.floorLightMapContext, ...shadowBase.vertices.map(v => {
+        this.floorShadowMapContext.beginPath();
+        polygon(this.floorShadowMapContext, ...shadowBase.vertices.map(v => {
           const d = vec.sub(v, this.position);
           return vec.add(v, vec.mul(d, shadowBase.offset));
         }));
-        this.floorLightMapContext.fill();
-        this.floorLightMapContext.stroke();
+        this.floorShadowMapContext.fill();
+        this.floorShadowMapContext.stroke();
         shadowY += (shadowY - this.position.y) * shadowBase.offset;
       }
 
@@ -281,7 +281,7 @@ class Light {
         }
       }
     });
-    this.floorLightMapContext.restore();
+    this.floorShadowMapContext.restore();
   }
 
   projectShadow(a, b, shadowBase, walls, shadowOffset) {
@@ -301,10 +301,10 @@ class Light {
     const v3 = vec.add(v4, vec.mul(bDelta, shadowBase.depth));
 
     // Create floor shadow shape
-    this.floorLightMapContext.beginPath();
-    polygon(this.floorLightMapContext, v1, v2, v3, v4);
-    this.floorLightMapContext.fill();
-    this.floorLightMapContext.stroke();
+    this.floorShadowMapContext.beginPath();
+    polygon(this.floorShadowMapContext, v1, v2, v3, v4);
+    this.floorShadowMapContext.fill();
+    this.floorShadowMapContext.stroke();
 
     // Extend shadow onto walls
     walls.forEach(wall => {
@@ -312,12 +312,12 @@ class Light {
 
       // If the wall is below the light, it is in shadow
       if (wallY > this.position.y) {
-        this.wallLightMapContext.save();
-        this.wallLightMapContext.beginPath();
-        polygon(this.wallLightMapContext, ...wall.vertices);
-        this.wallLightMapContext.fill();
-        this.wallLightMapContext.stroke();
-        this.wallLightMapContext.restore();
+        this.wallShadowMapContext.save();
+        this.wallShadowMapContext.beginPath();
+        polygon(this.wallShadowMapContext, ...wall.vertices);
+        this.wallShadowMapContext.fill();
+        this.wallShadowMapContext.stroke();
+        this.wallShadowMapContext.restore();
         return;
       }
 
@@ -367,31 +367,31 @@ class Light {
       }
 
       // Create a clipping mask for the wall's boundaries
-      this.wallLightMapContext.save();
-      this.wallLightMapContext.beginPath();
-      polygon(this.wallLightMapContext, ...wall.vertices);
+      this.wallShadowMapContext.save();
+      this.wallShadowMapContext.beginPath();
+      polygon(this.wallShadowMapContext, ...wall.vertices);
 
       // Subtract other walls below this one so we don't draw this wall's shadow onto them
       walls.filter(w => w.bottom > wallY).forEach(w => {
         const overlap = this.overlap2d(w.bounds, wall.bounds);
         if (overlap) {
-          polygon(this.wallLightMapContext, ...this.overlapVertices(overlap).reverse());
+          polygon(this.wallShadowMapContext, ...this.overlapVertices(overlap).reverse());
         }
       });
-      this.wallLightMapContext.clip();
+      this.wallShadowMapContext.clip();
 
       // Create wall shadow shape
-      this.wallLightMapContext.beginPath();
+      this.wallShadowMapContext.beginPath();
       polygon(
-        this.wallLightMapContext,
+        this.wallShadowMapContext,
         vec(min, Math.max(wallY - offset, wall.position.y)),
         vec(max, Math.max(wallY - offset, wall.position.y)),
         vec(max, Math.max(wallY - height, wall.position.y)),
         vec(min, Math.max(wallY - height, wall.position.y))
       );
-      this.wallLightMapContext.fill();
-      this.wallLightMapContext.stroke();
-      this.wallLightMapContext.restore();
+      this.wallShadowMapContext.fill();
+      this.wallShadowMapContext.stroke();
+      this.wallShadowMapContext.restore();
     });
   }
 

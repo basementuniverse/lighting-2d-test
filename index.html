@@ -55,6 +55,7 @@ Debug.initialise();
 // Actors and lights
 let actors = [];
 let lights = [];
+let showShadowMaps = 0;
 
 // Ambient light colour
 const AMBIENT_LIGHT = '#555';
@@ -86,6 +87,11 @@ function update() {
   }
   if (input.keyPressed('l')) {
     lights.push(new Light(p.x, p.y, 200));
+  }
+
+  // Show shadow maps
+  if (input.keyPressed('m')) {
+    showShadowMaps = showShadowMaps >= 2 ? 0 : showShadowMaps + 1;
   }
 
   // Update all actors and lights
@@ -158,6 +164,26 @@ function draw() {
   lights.forEach(light => light.draw(
     context
   ));
+
+  // Show shadow maps
+  if (showShadowMaps === 1) {
+    lights.forEach(light => {
+      context.drawImage(
+        light.floorShadowMapCanvas,
+        light.position.x - light.radius,
+        light.position.y - light.radius
+      );
+    });
+  }
+  if (showShadowMaps === 2) {
+    lights.forEach(light => {
+      context.drawImage(
+        light.wallShadowMapCanvas,
+        light.position.x - light.radius,
+        light.position.y - light.radius - Light.WALL_Y_OFFSET
+      );
+    });
+  }
 
   // Render debug
   Debug.draw(context);
