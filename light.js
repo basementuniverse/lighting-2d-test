@@ -156,37 +156,25 @@ class Light {
     context.restore();
   }
 
-  drawLightMaps(globalFloorLightMapContext, globalWallLightMapContext, actors) {
+  drawLightMaps(globalFloorLightMapContext, globalWallLightMapContext, globalLightMapContext, actors) {
+    this.floorShadowMapContext.save();
+    this.wallShadowMapContext.save();
+
     this.floorShadowMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
     this.wallShadowMapContext.clearRect(0, 0, this.radius * 2, this.radius * 2);
 
     // Fill lightmaps with darkness
     // Floor
-    this.floorShadowMapContext.fillStyle = 'black';
+    this.floorShadowMapContext.fillStyle = 'white';
     this.floorShadowMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
     // Wall
     this.wallShadowMapContext.fillStyle = 'black';
     this.wallShadowMapContext.fillRect(0, 0, this.radius * 2, this.radius * 2);
 
-    // Add light to lightmap
-    // Floor
-    this.floorShadowMapContext.beginPath();
-    this.floorShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
-    const floorGradient = this.floorShadowMapContext.createRadialGradient(
-      this.radius,
-      this.radius,
-      0,
-      this.radius,
-      this.radius,
-      this.radius
-    );
-    floorGradient.addColorStop(0, this.colour);
-    floorGradient.addColorStop(1, 'transparent');
-    this.floorShadowMapContext.fillStyle = floorGradient;
-    this.floorShadowMapContext.fill();
-    // Wall
+    // Add light to wall lightmap
     this.wallShadowMapContext.beginPath();
-    this.wallShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
+    // this.wallShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
+    this.wallShadowMapContext.rect(0, 0, this.radius * 2, this.radius * 2);
     const wallGradient = this.wallShadowMapContext.createRadialGradient(
       this.radius,
       this.radius,
@@ -196,12 +184,33 @@ class Light {
       this.radius
     );
     wallGradient.addColorStop(0, this.colour);
-    wallGradient.addColorStop(1, 'transparent');
+    wallGradient.addColorStop(1, 'black');
     this.wallShadowMapContext.fillStyle = wallGradient;
     this.wallShadowMapContext.fill();
 
     // Subtract shadows from lightmap
     this.drawShadows(actors);
+
+    // Add light to floor lightmap
+    this.floorShadowMapContext.beginPath();
+    // this.floorShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
+    this.floorShadowMapContext.rect(0, 0, this.radius * 2, this.radius * 2);
+    const floorGradient = this.floorShadowMapContext.createRadialGradient(
+      this.radius,
+      this.radius,
+      0,
+      this.radius,
+      this.radius,
+      this.radius
+    );
+    floorGradient.addColorStop(0, this.colour);
+    floorGradient.addColorStop(1, 'black');
+    this.floorShadowMapContext.fillStyle = floorGradient;
+    this.floorShadowMapContext.globalCompositeOperation = 'multiply';
+    this.floorShadowMapContext.fill();
+
+    this.floorShadowMapContext.restore();
+    this.wallShadowMapContext.restore();
 
     // Draw this light's lightmaps onto global lightmaps
     // Floor
@@ -222,6 +231,29 @@ class Light {
       this.position.y - this.radius - Light.WALL_Y_OFFSET
     );
     globalWallLightMapContext.restore();
+
+    // Draw this light's shadowmaps onto global lightmap
+    // Floor
+    globalLightMapContext.save();
+    globalLightMapContext.globalCompositeOperation = 'screen';
+    globalLightMapContext.drawImage(
+      this.floorShadowMapCanvas,
+      this.position.x - this.radius,
+      this.position.y - this.radius
+    );
+    // Wall
+    globalLightMapContext.beginPath();
+    actors.filter(actor => actor instanceof ShadowWall).forEach(actor => {
+      polygon(globalLightMapContext, ...actor.vertices);
+    });
+    globalLightMapContext.clip();
+    globalLightMapContext.globalCompositeOperation = 'screen';
+    globalLightMapContext.drawImage(
+      this.wallShadowMapCanvas,
+      this.position.x - this.radius,
+      this.position.y - this.radius - Light.WALL_Y_OFFSET
+    );
+    globalLightMapContext.restore();
   }
 
   drawShadows(actors) {
@@ -281,7 +313,17 @@ class Light {
         }
       }
     });
+
+    // Subtract walls from floor shadowmap
+    this.floorShadowMapContext.fillStyle = 'black';
+    walls.forEach(wall => {
+      this.floorShadowMapContext.beginPath();
+      polygon(this.floorShadowMapContext, ...wall.vertices);
+      this.floorShadowMapContext.fill();
+    });
+
     this.floorShadowMapContext.restore();
+    this.wallShadowMapContext.restore();
   }
 
   projectShadow(a, b, shadowBase, walls, shadowOffset) {

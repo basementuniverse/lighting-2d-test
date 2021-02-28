@@ -48,6 +48,12 @@ const globalWallLightMapContext = globalWallLightMapCanvas.getContext('2d');
 globalWallLightMapCanvas.width = WIDTH;
 globalWallLightMapCanvas.height = HEIGHT;
 
+// Global lightmap canvas
+const globalLightMapCanvas = document.createElement('canvas');
+const globalLightMapContext = globalLightMapCanvas.getContext('2d');
+globalLightMapCanvas.width = WIDTH;
+globalLightMapCanvas.height = HEIGHT;
+
 // Initialise input manager and debug
 const input = new Input(canvas);
 Debug.initialise();
@@ -127,10 +133,16 @@ function draw() {
   globalWallLightMapContext.fillStyle = AMBIENT_LIGHT;
   globalWallLightMapContext.fillRect(0, 0, WIDTH, HEIGHT);
 
+  // Reset global lightmap
+  globalLightMapContext.clearRect(0, 0, WIDTH, HEIGHT);
+  globalLightMapContext.fillStyle = AMBIENT_LIGHT;
+  globalLightMapContext.fillRect(0, 0, WIDTH, HEIGHT);
+
   // Render lightmaps
   lights.forEach(light => light.drawLightMaps(
     globalFloorLightMapContext,
     globalWallLightMapContext,
+    globalLightMapContext,
     actors
   ));
 
@@ -138,10 +150,10 @@ function draw() {
   actors.filter(actor => actor instanceof ShadowBase).forEach(actor => actor.draw(context));
 
   // Draw floor lightmap
-  context.save();
-  context.globalCompositeOperation = 'multiply';
-  context.drawImage(globalFloorLightMapCanvas, 0, 0);
-  context.restore();
+  // context.save();
+  // context.globalCompositeOperation = 'multiply';
+  // context.drawImage(globalFloorLightMapCanvas, 0, 0);
+  // context.restore();
 
   // Draw walls
   actors
@@ -150,14 +162,20 @@ function draw() {
   .forEach(actor => actor.draw(context));
 
   // Draw wall lightmap
+  // context.save();
+  // context.beginPath();
+  // actors.filter(actor => actor instanceof ShadowWall).forEach(actor => {
+  //   polygon(context, ...actor.vertices);
+  // });
+  // context.clip();
+  // context.globalCompositeOperation = 'multiply';
+  // context.drawImage(globalWallLightMapCanvas, 0, 0);
+  // context.restore();
+
+  // Draw lightmap
   context.save();
-  context.beginPath();
-  actors.filter(actor => actor instanceof ShadowWall).forEach(actor => {
-    polygon(context, ...actor.vertices);
-  });
-  context.clip();
   context.globalCompositeOperation = 'multiply';
-  context.drawImage(globalWallLightMapCanvas, 0, 0);
+  context.drawImage(globalLightMapCanvas, 0, 0);
   context.restore();
 
   // Draw light markers
