@@ -156,7 +156,7 @@ class Light {
     context.restore();
   }
 
-  drawLightMaps(globalFloorLightMapContext, globalWallLightMapContext, globalLightMapContext, actors) {
+  drawLightMaps(globalLightMapContext, actors) {
     this.floorShadowMapContext.save();
     this.wallShadowMapContext.save();
 
@@ -173,7 +173,6 @@ class Light {
 
     // Add light to wall lightmap
     this.wallShadowMapContext.beginPath();
-    // this.wallShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
     this.wallShadowMapContext.rect(0, 0, this.radius * 2, this.radius * 2);
     const wallGradient = this.wallShadowMapContext.createRadialGradient(
       this.radius,
@@ -193,7 +192,6 @@ class Light {
 
     // Add light to floor lightmap
     this.floorShadowMapContext.beginPath();
-    // this.floorShadowMapContext.arc(this.radius, this.radius, this.radius, 0, Math.PI * 2);
     this.floorShadowMapContext.rect(0, 0, this.radius * 2, this.radius * 2);
     const floorGradient = this.floorShadowMapContext.createRadialGradient(
       this.radius,
@@ -211,26 +209,6 @@ class Light {
 
     this.floorShadowMapContext.restore();
     this.wallShadowMapContext.restore();
-
-    // Draw this light's lightmaps onto global lightmaps
-    // Floor
-    globalFloorLightMapContext.save();
-    globalFloorLightMapContext.globalCompositeOperation = 'screen';
-    globalFloorLightMapContext.drawImage(
-      this.floorShadowMapCanvas,
-      this.position.x - this.radius,
-      this.position.y - this.radius
-    );
-    globalFloorLightMapContext.restore();
-    // Wall
-    globalWallLightMapContext.save();
-    globalWallLightMapContext.globalCompositeOperation = 'screen';
-    globalWallLightMapContext.drawImage(
-      this.wallShadowMapCanvas,
-      this.position.x - this.radius,
-      this.position.y - this.radius - Light.WALL_Y_OFFSET
-    );
-    globalWallLightMapContext.restore();
 
     // Draw this light's shadowmaps onto global lightmap
     // Floor
