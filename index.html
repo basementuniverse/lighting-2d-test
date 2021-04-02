@@ -125,7 +125,16 @@ function draw() {
 
   // Draw actors
   actors
-  .sort((a, b) => a.bottom - b.bottom)
+  .sort((a, b) => {
+
+    // Shadow bases should appear below walls (use a better comparison in production!)
+    if (a.bottom === b.bottom) {
+        return a.constructor.name.localeCompare(b.constructor.name);
+    }
+
+    // y-sorting
+    return a.bottom - b.bottom;
+  })
   .forEach(actor => actor.draw(context));
 
   // Draw lightmap

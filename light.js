@@ -9,9 +9,21 @@ class Light {
     '#0ff'
   ];
 
+  /*
+   * Light circle will be offset upwards by this amount on walls
+   */
   static WALL_Y_OFFSET = 50;
 
-  static WALL_SHADOW_AMOUNT = 1.5;
+  /*
+   * Shadow length is based on distance to shadow base & wall height, then multiplied by this value
+   */
+  static WALL_SHADOW_LENGTH = 1.5;
+
+  /*
+   * Walls are only lit when a light is below them, but light will fade out smoothly when light is above them
+   * and within this y-offset
+   */
+  static WALL_SHADOW_CUTOFF_DISTANCE = 50;
 
   constructor(x, y, r, c = 0) {
     this.position = vec(x, y);
@@ -257,6 +269,24 @@ class Light {
     // Get a list of walls
     const walls = actors.filter(actor => actor instanceof ShadowWall);
 
+    // If the wall is below the light, it is in shadow
+    walls.forEach(wall => {
+      const wallY = wall.bottom;
+      if (wallY > this.position.y) {
+        this.wallShadowMapContext.save();
+        this.wallShadowMapContext.beginPath();
+        polygon(this.wallShadowMapContext, ...wall.vertices);
+
+        // Fade shadow in when light goes above the wall
+        if (wallY < this.position.y + Light.WALL_SHADOW_CUTOFF_DISTANCE) {
+          this.wallShadowMapContext.globalAlpha = (wallY - this.position.y) / Light.WALL_SHADOW_CUTOFF_DISTANCE;
+        }
+        this.wallShadowMapContext.fill();
+        this.wallShadowMapContext.stroke();
+        this.wallShadowMapContext.restore();
+      }
+    });
+
     // Cast shadows from each shadow base onto the floor lightmap
     actors.filter(actor => actor instanceof ShadowBase).forEach(shadowBase => {
       const vertices = shadowBase.vertices;
@@ -330,17 +360,6 @@ class Light {
     walls.forEach(wall => {
       const wallY = wall.bottom;
 
-      // If the wall is below the light, it is in shadow
-      if (wallY > this.position.y) {
-        this.wallShadowMapContext.save();
-        this.wallShadowMapContext.beginPath();
-        polygon(this.wallShadowMapContext, ...wall.vertices);
-        this.wallShadowMapContext.fill();
-        this.wallShadowMapContext.stroke();
-        this.wallShadowMapContext.restore();
-        return;
-      }
-
       // Check if the shadow begins below the wall and extends beyond the wall's lower edge
       if (!(a.y >= wallY && b.y >= wallY && (v2.y < wallY || v3.y < wallY))) {
         return;
@@ -376,10 +395,10 @@ class Light {
       }
 
       // Calculate shadow height
-      const height = Math.max(0, wallY - Math.min(v2.y, v3.y)) * Light.WALL_SHADOW_AMOUNT;
+      const height = Math.max(0, wallY - Math.min(v2.y, v3.y)) * Light.WALL_SHADOW_LENGTH;
 
       // Calculate shadow offset
-      const offset = Math.max(0, wallY - shadowOffset) * Light.WALL_SHADOW_AMOUNT;
+      const offset = Math.max(0, wallY - shadowOffset) * Light.WALL_SHADOW_LENGTH;
 
       // If the wall shadow height or width is 0, don't draw the shadow
       if (height === 0 || min - max === 0) {
