@@ -2,6 +2,8 @@
 
 An experiment in rendering 2.5d shadow volumes.
 
+![preview](preview.png "Preview")
+
 Create:
 * ShadowBases ('ground profiles' for objects in the world. these cast shadows on the ground and on walls. Press 'b')
 * ShadowWalls (vertical surfaces facing down, ie. facing the camera. These receive shadows. Press 'w')
