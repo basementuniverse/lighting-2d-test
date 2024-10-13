@@ -1,5 +1,8 @@
 # 2.5d lighting & shadow volumes test
 
+> This has been deprecated! It's got so many broken edge cases that it's pretty much unusable...
+> I have implemented a better method here: https://github.com/basementuniverse/lighting-2d
+
 An experiment in rendering 2.5d shadow volumes.
 
 ![preview](preview.png "Preview")
